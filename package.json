@@ -1,0 +1,14 @@
+{
+  "name": "furever-home-monorepo",
+  "version": "1.0.0",
+  "description": "Root configuration for FurEver Home Pet Adoption Platform",
+  "scripts": {
+    "install-all": "npm install --prefix client && npm install --prefix server",
+    "server": "npm run dev --prefix server",
+    "client": "npm run dev --prefix client",
+    "dev": "npx -y concurrently -k -p \"[{name}]\" -n \"Server,Client\" -c \"cyan,magenta\" \"npm run dev --prefix server\" \"npm run dev --prefix client\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
