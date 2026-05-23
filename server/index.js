@@ -11,11 +11,20 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 5000;
 
-// CORS configuration
+// CORS configuration - Allow frontend to send credentials
+const allowedOrigins = [
+  'https://assignment-9-mehedi.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+];
+
 app.use(cors({
   origin: function (origin, callback) {
-    // Reflect request origin to allow credentials
-    callback(null, true);
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
   },
   credentials: true,
   optionsSuccessStatus: 200
@@ -24,28 +33,27 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-// Cookie options
+// Cookie options - Remove domain for cross-origin cookies
 const cookieOptions = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+  path: '/',
 };
 
 // MongoDB Connection
 const uri = process.env.MONGODB_URI;
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
-});
+const client = new MongoClient(uri);
 
 async function run() {
-  try {
-    // Connect the client to the server (optional in v4.7+)
+  
+    // Connect the client to the server
     await client.connect();
     console.log("Connected to MongoDB successfully!");
+    // Root route
+    app.get('/', (req, res) => {
+      res.send('Pet Adoption Platform Server is running');
+    });
 
     const db = client.db("petAdoptionDB");
     const petsCollection = db.collection("pets");
@@ -60,7 +68,7 @@ async function run() {
         if (count > 0) {
           return res.send({ message: 'Database already has data. Seed skipped.', count });
         }
-        
+
         const seedPets = [
           {
             name: "Bella",
@@ -211,8 +219,8 @@ async function run() {
 
         // Filter by species (supports multiple species as comma-separated or array)
         if (species) {
-          const speciesList = Array.isArray(species) 
-            ? species 
+          const speciesList = Array.isArray(species)
+            ? species
             : species.split(',').map(s => s.trim());
           if (speciesList.length > 0) {
             query.species = { $in: speciesList };
@@ -515,10 +523,10 @@ async function run() {
 
           // 3. Reject all other pending requests for this pet
           await requestsCollection.updateMany(
-            { 
-              petId: request.petId, 
-              _id: { $ne: new ObjectId(requestId) }, 
-              status: 'pending' 
+            {
+              petId: request.petId,
+              _id: { $ne: new ObjectId(requestId) },
+              status: 'pending'
             },
             { $set: { status: 'rejected' } }
           );
@@ -569,16 +577,11 @@ async function run() {
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
-  } catch (error) {
-    console.error("Database connection error:", error);
-  }
+  
 }
 run().catch(console.dir);
 
-// Root route
-app.get('/', (req, res) => {
-  res.send('Pet Adoption Platform Server is running');
-});
+
 
 // Start Server
 app.listen(port, () => {
